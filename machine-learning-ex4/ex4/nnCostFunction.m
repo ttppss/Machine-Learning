@@ -62,23 +62,21 @@ Theta2_grad = zeros(size(Theta2));
 %               and Theta2_grad from Part 2.
 %
 
-a1 = [ones(m, 1), X];
-z2 = Theta1 * a1';
-
+a1 = [ones(m, 1) X];
+z2 = a1 * Theta1';
 a2 = sigmoid(z2);
-a2 = a2';
-a2 = [ones(size(a2, 1), 1), a2];
-
+a2 = [ones(m, 1) a2];
 z3 = a2 * Theta2';
-
 h = sigmoid(z3);
 
-for k = 1:num_labels
-	hk = h(:, k);
-	yk = y == k;
-	Jk = (1/m) * sum(-yk .* log(hk) - (1 - yk) .* log(1 - hk));
-	J = J + Jk;
+
+% decode the labels as vectors containing only values 0 or 1, yVec is a 10 * 5000 vector;
+yVec = zeros(num_labels, m);
+for i = 1:m
+	yVec(y(i), i) = 1;
 end
+
+J = (1/m) * sum(sum(-yVec .* log(h)' - (1 - yVec) .* log(1 - h)'));
 
 Theta01 = Theta1(:, 2:end);
 Theta02 = Theta2(:, 2:end);
@@ -86,26 +84,31 @@ Theta02 = Theta2(:, 2:end);
 J = J + (lambda/(2 * m)) * (sum(sum(Theta01 .^ 2)) + sum(sum(Theta02 .^ 2)));
 
 for t = 1:m
-	a_1 = X(t,:);
-	a_1 = [1, a_1]';
-	
-	z_2 = Theta1 * a_1;
+	%forward propagation
+	a_1 = a1(t, :);
+	z_2 = Theta1 * a_1';
 	a_2 = sigmoid(z_2);
 	a_2 = [1; a_2];
-	
 	z_3 = Theta2 * a_2;
-	h = sigmoid(z_3);
+	a_3 = sigmoid(z_3);
 	
-	delta3 = h - y(t);
+	delta3 = a_3 - yVec(:, t);
+	delta2 = Theta2' * delta3 .* sigmoidGradient([1; z_2]);
 	
-	delta2 = Theta2' * delta3 .* sigmoidGradient(z_2);
+	delta2 = delta2(2:end);
+	
+	Theta2_grad = Theta2_grad + delta3 * a_2';
+	Theta1_grad = Theta1_grad + delta2 * a_1;
+end;
+
+Theta1_grad(:, 1) = Theta1_grad(:, 1) ./ m;
+
+Theta1_grad(:, 2:end) = Theta1_grad(:, 2:end) ./ m + ((lambda/m) * Theta1(:, 2:end));
 
 
+Theta2_grad(:, 1) = Theta2_grad(:, 1) ./ m;
 
-
-
-
-
+Theta2_grad(:, 2:end) = Theta2_grad(:, 2:end) ./ m + ((lambda/m) * Theta2(:, 2:end));
 
 
 
